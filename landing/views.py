@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from .models import Restroom, Sensor, Staff, CleaningActivity
+from .models import Restroom, Sensor, Staff,Alert
 import uuid
 
 def index(request):
@@ -39,6 +39,7 @@ def activation(request, restroom_id=None):
             latitude = request.POST.get('latitude')
             longitude = request.POST.get('longitude')
             capacity = request.POST.get('capacity')
+            chat_id = request.POST.get('chat_id')
             status = request.POST.get('status')
             
             # Check if sensor IDs already exist before saving
@@ -59,6 +60,7 @@ def activation(request, restroom_id=None):
                     latitude=float(latitude),
                     longitude=float(longitude),
                     capacity=int(capacity),
+                    chat_id=int(chat_id),   
                     status=status,
                     admin=request.user
                 )
@@ -68,6 +70,7 @@ def activation(request, restroom_id=None):
                 restroom.latitude = float(latitude)
                 restroom.longitude = float(longitude)
                 restroom.capacity = int(capacity)
+                restroom.chat_id = int(chat_id)
                 restroom.status = status
                 restroom.admin = request.user
                 restroom.save()
@@ -107,11 +110,12 @@ def activation(request, restroom_id=None):
              error_moisture = DummySensor(request.POST.get('sensor_moisture')) if request.POST.get('sensor_moisture') else moisture_sensor
              
              class DummyRestroom:
-                 def __init__(self, name, lat, lng, cap, stat):
+                 def __init__(self, name, lat, lng, cap, chat_id, stat):
                      self.name = name
                      self.latitude = lat
                      self.longitude = lng
                      self.capacity = cap
+                     self.chat_id = chat_id
                      self.status = stat
                      
              error_restroom = DummyRestroom(
@@ -119,6 +123,7 @@ def activation(request, restroom_id=None):
                  request.POST.get('latitude'),
                  request.POST.get('longitude'),
                  request.POST.get('capacity'),
+                 request.POST.get('chat_id'),
                  request.POST.get('status')
              ) if request.POST else restroom
              
@@ -178,6 +183,10 @@ def dashboard(request, restroom_id=None):
     footfall_sensor = restroom.sensors.filter(sensor_type='Footfall').first()
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
+
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 0
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 0
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 0
     
     # Moisture Data
     current_moisture = 0
@@ -187,7 +196,7 @@ def dashboard(request, restroom_id=None):
         latest_reading = moisture_sensor.readings.filter(timestamp__date=selected_date).order_by('-timestamp').first()
         if latest_reading:
             current_moisture = latest_reading.value
-            if current_moisture < 10:
+            if current_moisture < moisture_threshold:
                 floor_status = 'Dry'
             else:
                 floor_status = 'Wet'
@@ -200,7 +209,7 @@ def dashboard(request, restroom_id=None):
         latest_smoke = smoke_sensor.readings.filter(timestamp__date=selected_date).order_by('-timestamp').first()
         if latest_smoke:
             current_smoke = latest_smoke.value
-            if current_smoke > 50:
+            if current_smoke > smoke_threshold:
                 safety_status = 'Caution'
             else:
                 safety_status = 'Safe / Clear'
@@ -217,7 +226,7 @@ def dashboard(request, restroom_id=None):
         ammonia_data = [r.value for r in readings]
         if readings.exists():
             current_ammonia = round(sum(ammonia_data) / len(ammonia_data), 1)
-            if current_ammonia > 25:
+            if current_ammonia > ammonia_threshold:
                 ammonia_status = 'Critical'
 
     # 2. Footfall Data (Daily - Hourly)
@@ -226,18 +235,16 @@ def dashboard(request, restroom_id=None):
     total_footfall_today = 0
 
     if footfall_sensor:
-        # Mock aggregation: grouping by hour. Since mock data is sparse, we might need to be careful.
-        # Ideally using TruncHour, but for simple mock data, let's just show readings if they are 'per event' or sum them if 'per interval'.
-        # Our mock `populate_mock_data` created random values. Let's assume they are "counts reported every X minutes".
-        daily_readings = footfall_sensor.readings.filter(timestamp__date=selected_date)
-        total_footfall_today = int(sum([r.value for r in daily_readings]))
+        daily_readings = footfall_sensor.readings.filter(timestamp__date=selected_date).order_by('timestamp')
         
-        # Aggregate by hour
-        hourly_data = daily_readings.annotate(hour=TruncHour('timestamp')).values('hour').annotate(count=Count('id')).order_by('hour')
-        # Actually effectively needed sum of 'value' if value is count.
-        # Let's simple plot the raw values for now as mock data is "count per interval"
-        footfall_daily_labels = [r.timestamp.strftime('%H:%M') for r in daily_readings]
-        footfall_daily_data = [int(r.value) for r in daily_readings]
+        if daily_readings.exists():
+            # Arduino provides the cumulative value, so take the latest reading for total
+            latest_reading = daily_readings.last()
+            total_footfall_today = int(latest_reading.value)
+            
+            # Use raw values for the graph
+            footfall_daily_labels = [r.timestamp.strftime('%H:%M') for r in daily_readings]
+            footfall_daily_data = [int(r.value) for r in daily_readings]
 
     # 3. Footfall Data (Monthly)
     footfall_monthly_labels = []
@@ -307,6 +314,10 @@ def dashboard_data(request, restroom_id=None):
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
 
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 0
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 0
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 0
+
     # Moisture Data
     current_moisture = 0
     floor_status = 'Unknown'
@@ -314,7 +325,7 @@ def dashboard_data(request, restroom_id=None):
         latest_reading = moisture_sensor.readings.filter(timestamp__date=selected_date).order_by('-timestamp').first()
         if latest_reading:
             current_moisture = latest_reading.value
-            if current_moisture < 10:
+            if current_moisture < moisture_threshold:
                 floor_status = 'Dry'
             else:
                 floor_status = 'Wet'
@@ -326,7 +337,7 @@ def dashboard_data(request, restroom_id=None):
         latest_smoke = smoke_sensor.readings.filter(timestamp__date=selected_date).order_by('-timestamp').first()
         if latest_smoke:
             current_smoke = latest_smoke.value
-            if current_smoke > 50:
+            if current_smoke > smoke_threshold:
                 safety_status = 'Caution'
             else:
                 safety_status = 'Safe / Clear'
@@ -342,7 +353,7 @@ def dashboard_data(request, restroom_id=None):
         ammonia_data = [r.value for r in readings]
         if readings.exists():
             current_ammonia = round(sum(ammonia_data) / len(ammonia_data), 1)
-            if current_ammonia > 25:
+            if current_ammonia > ammonia_threshold:
                 ammonia_status = 'Critical'
 
     # Footfall Data (Daily)
@@ -352,7 +363,11 @@ def dashboard_data(request, restroom_id=None):
     if footfall_sensor:
         daily_readings = footfall_sensor.readings.filter(timestamp__date=selected_date).order_by('timestamp')
         if daily_readings.exists():
-            total_footfall_today = int(sum([r.value for r in daily_readings]))
+            # Arduino provides the cumulative value, so take the latest reading for total
+            latest_reading = daily_readings.last()
+            total_footfall_today = int(latest_reading.value)
+            
+            # Use raw values for the graph
             footfall_daily_labels = [r.timestamp.strftime('%H:%M') for r in daily_readings]
             footfall_daily_data = [int(r.value) for r in daily_readings]
 
@@ -383,7 +398,28 @@ def restroom_list(request):
 
 @login_required
 def settings_view(request):
-    return render(request, 'landing/settings.html', {'page': 'settings'})
+    restrooms = request.user.restrooms.all()
+    
+    if request.method == 'POST':
+        for key, value in request.POST.items():
+            if key.startswith('sensor_') and key.endswith('_threshold_max'):
+                try:
+                    sensor_id = key.split('_')[1] # Extracts ID from sensor_{id}_threshold_max
+                    sensor = Sensor.objects.get(id=sensor_id, restroom__admin=request.user)
+                    if value:
+                        sensor.threshold_max = float(value)
+                    else:
+                        sensor.threshold_max = None
+                    sensor.save()
+                except (ValueError, Sensor.DoesNotExist):
+                    continue
+        messages.success(request, 'Settings have been updated successfully.')
+        return redirect('settings')
+        
+    return render(request, 'landing/settings.html', {
+        'page': 'settings',
+        'restrooms': restrooms
+    })
 
 @login_required
 def staff_list(request, restroom_id=None):
@@ -590,48 +626,71 @@ def logout_view(request):
     logout(request)
     return redirect('index')
 
-@login_required
-def staff_logs(request, staff_id):
-    try:
-        staff = Staff.objects.get(id=staff_id)
-        # Ensure user is admin of the restroom this staff belongs to
-        if staff.restroom.admin != request.user:
-             return redirect('staff_list')
-    except Staff.DoesNotExist:
-        return redirect('staff_list')
+# @login_required
+# def staff_logs(request, staff_id):
+#     try:
+#         staff = Staff.objects.get(id=staff_id)
+#         # Ensure user is admin of the restroom this staff belongs to
+#         if staff.restroom.admin != request.user:
+#              return redirect('staff_list')
+#     except Staff.DoesNotExist:
+#         return redirect('staff_list')
 
-    # Calculate status
-    now_time = timezone.now().time()
-    # Simple check: start <= now <= end.
-    if staff.shift_start <= now_time <= staff.shift_end:
-        staff.status = 'On Duty'
-    else:
-        staff.status = 'Off Duty'
+#     # Calculate status
+#     now_time = timezone.now().time()
+#     # Simple check: start <= now <= end.
+#     if staff.shift_start <= now_time <= staff.shift_end:
+#         staff.status = 'On Duty'
+#     else:
+#         staff.status = 'Off Duty'
 
-    # Date Filter
-    date_str = request.GET.get('date')
-    if date_str:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    else:
-        # Default to today or None? Dashboard defaults to today, but logs might be better to default to all or today?
-        # User said "work similar to dashboard", so default to today might be best, OR "Recent logs" implies all recent.
-        # However, to filter by date usually implies showing a specific day.
-        # Let's default to today to match Dashboard behavior exactly as requested.
-        selected_date = timezone.now().date()
+#     # Date Filter
+#     date_str = request.GET.get('date')
+#     if date_str:
+#         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+#     else:
+#         # Default to today or None? Dashboard defaults to today, but logs might be better to default to all or today?
+#         # User said "work similar to dashboard", so default to today might be best, OR "Recent logs" implies all recent.
+#         # However, to filter by date usually implies showing a specific day.
+#         # Let's default to today to match Dashboard behavior exactly as requested.
+#         selected_date = timezone.now().date()
 
-    # Fetch logs
-    logs = CleaningActivity.objects.filter(staff=staff, start_time__date=selected_date).order_by('-start_time')
+#     # Fetch logs
+#     logs = CleaningActivity.objects.filter(staff=staff, start_time__date=selected_date).order_by('-start_time')
     
-    # Calculate duration for display
-    for log in logs:
-        if log.end_time:
-            duration = log.end_time - log.start_time
-            log.duration_minutes = int(duration.total_seconds() / 60)
-        else:
-            log.duration_minutes = None
+#     # Calculate duration for display
+#     for log in logs:
+#         if log.end_time:
+#             duration = log.end_time - log.start_time
+#             log.duration_minutes = int(duration.total_seconds() / 60)
+#         else:
+#             log.duration_minutes = None
 
-    return render(request, 'landing/staff_logs.html', {
-        'staff': staff,
-        'logs': logs,
-        'selected_date': selected_date.strftime('%Y-%m-%d')
+#     return render(request, 'landing/staff_logs.html', {
+#         'staff': staff,
+#         'logs': logs,
+#         'selected_date': selected_date.strftime('%Y-%m-%d')
+#     })
+
+@login_required
+def alerts_list(request):
+    alerts = Alert.objects.filter(restroom__admin=request.user).order_by('-timestamp')
+    return render(request, 'landing/alerts.html', {
+        'alerts': alerts,
+        'page': 'alerts'
     })
+
+@login_required
+def resolve_alert(request, alert_id):
+    if request.method == 'POST':
+        try:
+            alert = Alert.objects.get(id=alert_id, restroom__admin=request.user)
+            alert.resolved = True
+            alert.save()
+            return JsonResponse({'status': 'success', 'message': 'Alert marked as resolved.'})
+        except Alert.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Alert not found or unauthorized.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+

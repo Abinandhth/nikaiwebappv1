@@ -8,6 +8,70 @@
     <title>Staff Management - NIKAI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'landing/style.css' %}">
+    <style>
+        .staff-expand-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-second);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            transition: background 0.2s, color 0.2s;
+            position: absolute;
+            top: 50%;
+            right: 0.5rem;
+            transform: translateY(-50%);
+        }
+        .staff-expand-btn:hover {
+            background: rgba(55, 65, 81, 0.6);
+            color: white;
+        }
+        .staff-expand-btn svg {
+            transition: transform 0.25s ease;
+        }
+        .staff-expand-btn.open svg {
+            transform: rotate(180deg);
+        }
+        .staff-detail-row td {
+            padding: 0 !important;
+        }
+        .staff-detail-inner {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        .staff-detail-inner.open {
+            max-height: 200px;
+        }
+        .staff-detail-content {
+            padding: 0.85rem 1.5rem 0.85rem 4.5rem;
+            display: flex;
+            gap: 2.5rem;
+            background: rgba(17, 24, 39, 0.6);
+            border-top: 1px solid var(--card-border);
+        }
+        .staff-detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .staff-detail-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-second);
+            font-weight: 600;
+        }
+        .staff-detail-value {
+            font-size: 0.9rem;
+            color: white;
+            font-weight: 500;
+        }
+    </style>
 </head>
 
 <body class="dashboard-body">
@@ -44,6 +108,13 @@
                     <circle cx="9" cy="7" r="4"></circle>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </a>
+            <a href="{% url 'alerts_list' %}" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
             </a>
             <a href="{% url 'settings' %}" class="nav-item">
@@ -147,7 +218,7 @@
                     <tbody id="staffTableBody">
                         {% for staff in staff_members %}
                         <tr class="staff-row" data-role="{{ staff.role }}" data-dept="{{ staff.restroom.name }}"
-                            style="border-bottom: 1px solid var(--card-border);">
+                            style="border-bottom: 1px solid var(--card-border); position: relative;">
                             <td style="padding: 1rem 1.5rem;">
                                 <div style="display: flex; align-items: center; gap: 1rem;">
                                     <div
@@ -165,6 +236,14 @@
                             <td style="padding: 1rem 1.5rem; color: var(--text-second);">{{ staff.restroom.name }}</td>
                             <td style="padding: 1rem 1.5rem; color: var(--text-second);">{{ staff.phone }}</td>
                             <td style="padding: 1rem 1.5rem; position: relative;">
+                                <!-- Dropdown arrow for shift/joined info -->
+                                <button class="staff-expand-btn" onclick="toggleStaffDetail(this, 'detail-{{ staff.id }}')" title="View shift & joined date">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
                                 <details style="position: relative;">
                                     <summary
                                         style="list-style: none; cursor: pointer; color: var(--text-second); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s;">
@@ -178,22 +257,6 @@
                                     </summary>
                                     <div
                                         style="position: absolute; right: 0; top: 100%; background: #1f2937; border: 1px solid var(--card-border); border-radius: 0.5rem; padding: 0.5rem; z-index: 50; min-width: 160px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);">
-                                        <a href="{% url 'staff_logs' staff.id %}"
-                                            style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; color: var(--text-second); text-decoration: none; font-size: 0.875rem; border-radius: 0.25rem; transition: all 0.2s;"
-                                            onmouseover="this.style.background='rgba(55, 65, 81, 0.5)'; this.style.color='white'"
-                                            onmouseout="this.style.background='none'; this.style.color='var(--text-second)'">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                                stroke-linejoin="round">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z">
-                                                </path>
-                                                <polyline points="14 2 14 8 20 8"></polyline>
-                                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                <polyline points="10 9 9 9 8 9"></polyline>
-                                            </svg>
-                                            Cleaning Log
-                                        </a>
                                         <a href="{% url 'edit_staff' staff.id %}"
                                             style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; color: var(--text-second); text-decoration: none; font-size: 0.875rem; border-radius: 0.25rem; transition: all 0.2s;"
                                             onmouseover="this.style.background='rgba(55, 65, 81, 0.5)'; this.style.color='white'"
@@ -231,6 +294,29 @@
                                 </details>
                             </td>
                         </tr>
+                        <!-- Expandable detail row for shift schedule & joined date -->
+                        <tr class="staff-detail-row" id="detail-{{ staff.id }}">
+                            <td colspan="5">
+                                <div class="staff-detail-inner">
+                                    <div class="staff-detail-content">
+                                        <div class="staff-detail-item">
+                                            <span class="staff-detail-label">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                                Shift Schedule
+                                            </span>
+                                            <span class="staff-detail-value">{{ staff.shift_start|time:"H:i" }} – {{ staff.shift_end|time:"H:i" }}</span>
+                                        </div>
+                                        <div class="staff-detail-item">
+                                            <span class="staff-detail-label">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                Joined Date
+                                            </span>
+                                            <span class="staff-detail-value">{{ staff.created_at|date:"d M Y" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                         {% empty %}
                         <tr>
                             <td colspan="5" style="padding: 3rem; text-align: center; color: var(--text-second);">
@@ -249,6 +335,27 @@
 
     </main>
     <script>
+        // Toggle expandable shift/date detail row
+        function toggleStaffDetail(btn, detailId) {
+            const detailRow = document.getElementById(detailId);
+            const inner = detailRow.querySelector('.staff-detail-inner');
+            const isOpen = inner.classList.contains('open');
+
+            // Close all open detail rows first
+            document.querySelectorAll('.staff-detail-inner.open').forEach(function(el) {
+                el.classList.remove('open');
+            });
+            document.querySelectorAll('.staff-expand-btn.open').forEach(function(el) {
+                el.classList.remove('open');
+            });
+
+            // Toggle the clicked one
+            if (!isOpen) {
+                inner.classList.add('open');
+                btn.classList.add('open');
+            }
+        }
+
         // Close dropdown (details tag) when clicking outside
         window.addEventListener('click', function (e) {
             if (!e.target.closest('details')) {

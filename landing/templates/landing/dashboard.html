@@ -47,6 +47,13 @@
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
             </a>
+            <a href="{% url 'alerts_list' %}" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+            </a>
             <a href="{% url 'settings' %}" class="nav-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -134,7 +141,7 @@
                     <div class="aq-status">
                         <div class="card-label">Status</div>
                         <h4 id="ammonia-status-text">{{ ammonia_status }}</h4>
-                        <p>Threshold: &lt; 25 PPM</p>
+                        <p>Threshold: &lt; 600 PPM</p>
                     </div>
                 </div>
             </div>
@@ -298,7 +305,7 @@
                 labels: {{ ammonia_labels| safe }}, // Assuming these align roughly or using one time axis
         datasets: [
             {
-                label: 'Ammonia Levels',
+                label: 'Air Quality Levels',
                 data: {{ ammonia_data| safe }},
             borderColor: '#00ecff',
             backgroundColor: gradientAmmonia,

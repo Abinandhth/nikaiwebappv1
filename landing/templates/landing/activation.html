@@ -112,6 +112,11 @@
                             value="{{ restroom.capacity|default:'' }}" required>
                     </div>
                     <div>
+                        <label>Notification Chat ID</label>
+                        <input type="number" name="chat_id" placeholder="10" class="dark-input"
+                            value="{{ restroom.chat_id|default:'' }}" required>
+                    </div>
+                    <div>
                         <label>Status</label>
                         <select name="status" class="dark-input select-input">
                             <option value="Operational" {% if restroom.status == 'Operational' %}selected{% endif %}>

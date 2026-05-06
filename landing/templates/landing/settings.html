@@ -46,6 +46,13 @@
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
             </a>
+            <a href="{% url 'alerts_list' %}" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+            </a>
             <a href="{% url 'settings' %}" class="nav-item active">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -75,20 +82,153 @@
         <header class="dash-header">
             <div>
                 <h1>Settings</h1>
-                <div class="location-badge">Account and Application Configurations</div>
+                <div class="location-badge">Sensor Threshold Settings</div>
             </div>
         </header>
 
         <section class="top-grid">
-            <div class="d-card" style="grid-column: span 3;">
-                <div class="card-header">
-                    <div class="card-label">Profile Settings</div>
+            <div class="d-card"
+                style="grid-column: span 3; background: #0d141e; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 2rem;">
+                <div class="card-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem;">
+                    <div class="card-label" style="font-size: 1.25rem; font-weight: 600; color: white;">Sensor Threshold
+                        Settings</div>
+                    {% if restrooms %}
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <label for="restroomSelect"
+                            style="color: var(--text-second); font-size: 0.9rem; font-weight: 500;">Select
+                            Restroom:</label>
+                        <select id="restroomSelect" onchange="filterRestrooms()" class="dark-input"
+                            style="padding: 0.6rem 1.2rem; border-radius: 8px; background: rgba(16, 20, 26, 0.8); border: 1px solid rgba(75, 85, 99, 0.5); color: white; min-width: 220px; outline: none; transition: border-color 0.2s;">
+                            <option value="all">All Restrooms</option>
+                            {% for r in restrooms %}
+                            <option value="{{ r.id }}">{{ r.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
                 </div>
-                <p style="color: var(--text-second);">Settings functionality coming soon...</p>
+
+                {% if messages %}
+                {% for message in messages %}
+                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}"
+                    style="padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2);">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <form method="POST" action="{% url 'settings' %}">
+                    {% csrf_token %}
+
+                    {% for restroom in restrooms %}
+                    <div 
+                        class="restroom-settings" 
+                        data-restroom-id="{{ restroom.id }}"
+                        style="
+                            margin-bottom: 2rem;
+                            padding: 1.5rem;
+                            border: 1px solid rgba(255,255,255,0.05);
+                            border-radius: 12px;
+                            background: rgba(17, 24, 39, 0.4);
+                            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+                            transition: all 0.3s ease;
+                        "
+                    >
+
+                        <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:var(--text-main);">
+                            {{ restroom.name }}
+                            <!-- <span style="font-size:0.85rem; color:var(--text-second); font-weight:normal;">
+                                ({{ restroom.restroom_id }})
+                            </span> -->
+                        </h3>
+
+                        {% if restroom.sensors.all|length > 0 %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+
+                            {% for sensor in restroom.sensors.all %}
+                            <div class="form-group" style="margin-bottom: 0;">
+
+                                <label style="display:block; margin-bottom:0.5rem; font-size:0.9rem; color:var(--text-second);">
+                                    <strong>{{ sensor.sensor_type }} Sensor Max Threshold</strong>
+                                </label>
+
+                                <div style="display:flex; flex-direction:column;">
+
+                                    <span style="font-size:0.75rem; color:var(--text-second); margin-bottom:0.25rem;">
+                                        ID: {{ sensor.sensor_id }}
+                                    </span>
+
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        name="sensor_{{ sensor.id }}_threshold_max"
+                                        value="{{ sensor.threshold_max|default_if_none:'' }}"
+                                        class="form-control"
+                                        placeholder="Leave empty for no max"
+
+                                        style="
+                                        width:100%;
+                                        padding:0.75rem 1rem;
+                                        border:1px solid rgba(75,85,99,0.4);
+                                        border-radius:8px;
+                                        background:rgba(31,41,55,0.5);
+                                        color:white;
+                                        outline:none;
+                                        transition:border-color 0.2s;
+                                        "
+
+                                        onfocus="this.style.borderColor='var(--primary-color)'"
+                                        onblur="this.style.borderColor='rgba(75,85,99,0.4)'"
+                                    >
+
+                                </div>
+
+                            </div>
+                            {% endfor %}
+
+                        </div>
+                        {% else %}
+                        <p style="color: var(--text-second); font-size: 0.9rem; margin: 0;">
+                            No sensors found for this restroom.
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p style="color: var(--text-second); text-align: center; padding: 2rem;">No restrooms available.
+                        Please add a restroom first.</p>
+                    {% endfor %}
+
+                    {% if restrooms %}
+                    <div
+                        style="display: flex; justify-content: flex-end; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <button type="submit" class="btn-primary"
+                            style="padding: 0.75rem 2.5rem; background: var(--primary-color); color: rgb(38, 36, 36); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);"
+                            onmouseover="this.style.transform='translateY(-1px)'"
+                            onmouseout="this.style.transform='translateY(0)'">
+                            Save Settings</button>
+                    </div>
+                    {% endif %}
+                </form>
             </div>
         </section>
 
     </main>
+    <script>
+        function filterRestrooms() {
+            const selectedId = document.getElementById('restroomSelect').value;
+            const restroomDivs = document.querySelectorAll('.restroom-settings');
+
+            restroomDivs.forEach(div => {
+                const restroomId = div.getAttribute('data-restroom-id');
+                if (selectedId === 'all' || selectedId === restroomId) {
+                    div.style.display = 'block';
+                } else {
+                    div.style.display = 'none';
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>

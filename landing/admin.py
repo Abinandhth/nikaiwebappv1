@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Restroom, Sensor, SensorReading, Staff, CleaningActivity
+from .models import Restroom, Sensor, SensorReading, Staff, Alert
 
 @admin.register(Restroom)
 class RestroomAdmin(admin.ModelAdmin):
@@ -23,10 +23,16 @@ class SensorReadingAdmin(admin.ModelAdmin):
 class StaffAdmin(admin.ModelAdmin):
     list_display = ('name', 'role', 'email', 'phone', 'restroom', 'shift_start', 'shift_end')
     list_filter = ('role', 'restroom', 'created_at')
-    search_fields = ('name', 'email', 'nfc_tag')
+    search_fields = ('name', 'email')
 
-@admin.register(CleaningActivity)
-class CleaningActivityAdmin(admin.ModelAdmin):
-    list_display = ('activity_type', 'restroom', 'staff', 'status', 'start_time')
-    list_filter = ('status', 'restroom', 'start_time')
-    search_fields = ('activity_type', 'restroom__name', 'staff__name')
+# @admin.register(CleaningActivity)
+# class CleaningActivityAdmin(admin.ModelAdmin):
+#     list_display = ('activity_type', 'restroom', 'staff', 'status', 'start_time')
+#     list_filter = ('status', 'restroom', 'start_time')
+#     search_fields = ('activity_type', 'restroom__name', 'staff__name')
+
+@admin.register(Alert)
+class AlertAdmin(admin.ModelAdmin):
+    list_display = ('restroom', 'message', 'resolved', 'timestamp')
+    list_filter = ('resolved', 'timestamp', 'restroom')
+    search_fields = ('message', 'restroom__name')

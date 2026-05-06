@@ -23,5 +23,9 @@ urlpatterns = [
     path('staff/add/<str:restroom_id>/', views.add_staff, name='add_staff_linked'),
     path('staff/edit/<int:staff_id>/', views.add_staff, name='edit_staff'),
     path('staff/delete/<int:staff_id>/', views.delete_staff, name='delete_staff'),
-    path('staff/logs/<int:staff_id>/', views.staff_logs, name='staff_logs'),
+    # path('staff/logs/<int:staff_id>/', views.staff_logs, name='staff_logs'),
+    path('alerts/', views.alerts_list, name='alerts_list'),
+    path('alerts/resolve/<int:alert_id>/', views.resolve_alert, name='resolve_alert'),
+    
+
 ]
