@@ -19,9 +19,9 @@ BAUD_RATE = 9600
 
 THRESHOLD = 600         # Smoke threshold
 ALERT_DURATION = 60      # 60 seconds continuous high
-COOLDOWN = 120           # 2 minutes before next alert
+COOLDOWN = 600           # 10 minutes before next alert
 DB_SAVE_INTERVAL = 10 
-ALERT_DELAY = 5   # seconds between alerts
+ALERT_DELAY = 600   # seconds between alerts
 
 last_alert_times = {}  # track per sensor   # Save to DB every 10 seconds
 

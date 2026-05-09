@@ -694,3 +694,261 @@ def resolve_alert(request, alert_id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
+
+
+
+
+
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Sensor, SensorReading, Alert
+import json
+import requests
+import time
+
+from django.conf import settings
+
+TELEGRAM_TOKEN = settings.TELEGRAM_BOT_TOKEN
+ALERT_DELAY = 5
+
+# stores last alert time for each sensor
+last_alert_times = {}
+
+def send_telegram_alert(message, chat_id):
+    if not chat_id:
+        print("No chat id")
+        return
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": message
+    }
+
+    try:
+        requests.post(url, data=payload)
+        print("Telegram alert sent")
+    except Exception as e:
+        print(f"Telegram error: {e}")
+
+@csrf_exempt
+
+def sensor_data(request):
+
+    if request.method != 'POST':
+        return JsonResponse({
+            'error': 'POST request required'
+        }, status=400)
+
+    try:
+        data = json.loads(request.body)
+
+        sensor_id = data.get('sensor_id')
+        value = data.get('value')
+
+        if sensor_id is None or value is None:
+             return JsonResponse({
+                'error': 'sensor_id and value required'
+            }, status=400)
+
+        sensor = Sensor.objects.filter(sensor_id=sensor_id).first()
+        if not sensor:
+            return JsonResponse({
+                'error': 'Sensor not found'
+            }, status=404)
+
+        # SAVE READING
+        reading = SensorReading.objects.create(
+            sensor=sensor,
+            value=value
+        )
+
+        print(f"Saved reading: {sensor_id} = {value}")
+
+        # THRESHOLD CHECK
+        threshold = sensor.threshold_max or 600
+
+        current_time = time.time()
+
+        if float(value) > threshold:
+
+            alert_key = sensor_id
+            last_alert_time = last_alert_times.get(alert_key, 0)
+
+            # avoid spam alerts
+            if current_time - last_alert_time >= ALERT_DELAY:
+
+                restroom = sensor.restroom
+
+                msg = (
+                    f"🚨 ALERT\n"
+                    f"Restroom: {restroom.name}\n"
+                    f"Sensor: {sensor.sensor_type}\n"
+                    f"Value: {value}\n"
+                    f"Threshold: {threshold}"
+                )
+
+                alert = Alert.objects.create(
+                    message=msg,
+                    restroom=restroom,
+                    sensor_reading=reading
+                )
+
+                chat_id = restroom.chat_id
+
+                if chat_id:
+                    send_telegram_alert(msg, chat_id)
+
+                last_alert_times[alert_key] = current_time
+
+        return JsonResponse({
+            'message': 'Data received successfully'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)
+
+
+
+
+
+
+
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.timezone import now
+
+from .models import Restroom, Alert
+
+import json
+import requests
+import time
+
+# =====================================================
+# TELEGRAM CONFIG
+# =====================================================
+
+BOT_TOKEN = settings.TELEGRAM_BOT_TOKEN
+
+BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+
+# =====================================================
+# SEND TELEGRAM MESSAGE
+# =====================================================
+
+def send_message(chat_id, text):
+
+    url = f"{BASE_URL}/sendMessage"
+
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
+
+    try:
+        requests.post(url, data=payload)
+
+    except Exception as e:
+        print(f"Telegram send error: {e}")
+
+# =====================================================
+# TELEGRAM WEBHOOK
+# =====================================================
+
+@csrf_exempt
+def telegram_webhook(request):
+
+    if request.method != "POST":
+
+        return JsonResponse({
+            "error": "POST request required"
+        })
+
+    try:
+
+        data = json.loads(request.body)
+
+        print("\nTelegram update received")
+        print(data)
+
+        # =============================================
+        # CHECK MESSAGE EXISTS
+        # =============================================
+
+        if "message" not in data:
+
+            return JsonResponse({
+                "message": "No message found"
+            })
+
+        message = data["message"]
+
+        chat_id = str(message["chat"]["id"])
+
+        text = message.get(
+            "text",
+            ""
+        ).strip().lower()
+
+        print(f"Chat ID: {chat_id}")
+        print(f"Text: {text}")
+
+        # =============================================
+        # RESOLVED COMMAND
+        # =============================================
+
+        if text == "resolved":
+
+            restroom = Restroom.objects.filter(
+                chat_id=chat_id
+            ).first()
+
+            if not restroom:
+
+                send_message(
+                    chat_id,
+                    "❌ No restroom linked to this group."
+                )
+
+                return JsonResponse({
+                    "message": "No restroom linked"
+                })
+
+            today = now().date()
+
+            updated_count = Alert.objects.filter(
+                restroom=restroom,
+                timestamp__date=today,
+                resolved=False
+            ).update(resolved=True)
+
+            send_message(
+                chat_id,
+                (
+                    f"✅ {updated_count} alerts "
+                    f"marked resolved for today."
+                )
+            )
+
+        return JsonResponse({
+            "message": "Webhook processed"
+        })
+
+    except Exception as e:
+
+        print(f"Webhook error: {e}")
+
+        return JsonResponse({
+            "error": str(e)
+        }, status=500)

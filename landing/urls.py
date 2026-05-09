@@ -26,6 +26,9 @@ urlpatterns = [
     # path('staff/logs/<int:staff_id>/', views.staff_logs, name='staff_logs'),
     path('alerts/', views.alerts_list, name='alerts_list'),
     path('alerts/resolve/<int:alert_id>/', views.resolve_alert, name='resolve_alert'),
-    
+    path('sensor/data/', views.sensor_data, name='sensor_data'),
+    path('webhook/telegram/', views.telegram_webhook, name="telegram_webhook"),
+
+
 
 ]
