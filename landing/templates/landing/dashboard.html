@@ -219,14 +219,13 @@
                     <div class="card-label" style="font-size: 1rem; color: white;">Facility Trends</div>
                     <div class="legend">
                         <div class="legend-item"><span class="dot-ammonia"></span> Air Quality levels</div>
-                        <div class="legend-item"><span class="dot-footfall"></span> Footfall</div>
                     </div>
                 </div>
                 <div class="chart-controls">
-                    <div class="toggle-group">
+                    <!-- <div class="toggle-group">
                         <div class="toggle-btn active">Day</div>
                         <div class="toggle-btn">Month</div>
-                    </div>
+                    </div> -->
                     <form method="get" id="dateForm">
                         <label class="date-picker-btn">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -313,20 +312,6 @@
             tension: 0.4,
             fill: true,
             yAxisID: 'y'
-                    },
-            {
-                label: 'Footfall',
-                data: {{ footfall_daily_data| safe }}, // We might need to match array lengths. 
-            // Note: If labels don't match, Chart.js might truncate. In a real app, we'd merge time series.
-            // For this UI demo, we'll try to visually fit.
-            borderColor: '#ffffff',
-            borderWidth: 2,
-            borderDash: [5, 5],
-            tension: 0.4,
-            pointRadius: 3,
-            pointBackgroundColor: '#000',
-            pointBorderColor: '#fff',
-            yAxisID: 'y1'
                     }
         ]
             },
@@ -359,12 +344,6 @@
                         grid: { color: 'rgba(31, 41, 55, 0.5)' },
                     ticks: { color: '#6b7280' },
                     beginAtZero: true
-                },
-                y1: {
-                    position: 'right',
-                        grid: { display: false },
-                    ticks: { color: '#6b7280' },
-                    beginAtZero: true
                 }
             }
         }
@@ -386,7 +365,6 @@
 
                     mainChart.data.labels = data.ammonia_labels;
                     mainChart.data.datasets[0].data = data.ammonia_data;
-                    mainChart.data.datasets[1].data = data.footfall_daily_data;
                     mainChart.update();
 
                     // Update Ammonia Gauge
