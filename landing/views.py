@@ -719,7 +719,7 @@ import time
 from django.conf import settings
 
 TELEGRAM_TOKEN = settings.TELEGRAM_BOT_TOKEN
-ALERT_DELAY = 5
+ALERT_DELAY = 300
 
 # stores last alert time for each sensor
 last_alert_times = {}
