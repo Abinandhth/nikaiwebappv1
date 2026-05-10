@@ -184,9 +184,9 @@ def dashboard(request, restroom_id=None):
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
 
-    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 0
-    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 0
-    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 0
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 1000
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 800
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 600
     
     # Moisture Data
     current_moisture = 0
@@ -284,6 +284,9 @@ def dashboard(request, restroom_id=None):
         'current_smoke': current_smoke,
         'safety_status': safety_status,
         'page': 'overview',
+        'ammonia_threshold':ammonia_threshold,
+        'smoke_threshold':smoke_threshold,
+        'moisture_threshold':moisture_threshold,
     })
 
 @login_required
@@ -314,9 +317,9 @@ def dashboard_data(request, restroom_id=None):
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
 
-    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 0
-    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 0
-    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 0
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 1000
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 800
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 600
 
     # Moisture Data
     current_moisture = 0
@@ -383,6 +386,9 @@ def dashboard_data(request, restroom_id=None):
         'floor_status': floor_status,
         'current_smoke': current_smoke,
         'safety_status': safety_status,
+        'ammonia_threshold':ammonia_threshold,
+        'smoke_threshold':smoke_threshold,
+        'moisture_threshold':moisture_threshold,
     })
 
 @login_required
