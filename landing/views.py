@@ -184,9 +184,9 @@ def dashboard(request, restroom_id=None):
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
 
-    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 1000
-    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 800
-    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 600
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor and moisture_sensor.threshold_max is not None else 1000
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor and smoke_sensor.threshold_max is not None else 800
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor and ammonia_sensor.threshold_max is not None else 600
     
     # Moisture Data
     current_moisture = 0
@@ -317,9 +317,9 @@ def dashboard_data(request, restroom_id=None):
     moisture_sensor = restroom.sensors.filter(sensor_type='Moisture').first()
     smoke_sensor = restroom.sensors.filter(sensor_type='Smoke').first()
 
-    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor else 1000
-    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor else 800
-    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor else 600
+    moisture_threshold = moisture_sensor.threshold_max if moisture_sensor and moisture_sensor.threshold_max is not None else 1000
+    smoke_threshold = smoke_sensor.threshold_max if smoke_sensor and smoke_sensor.threshold_max is not None else 800
+    ammonia_threshold = ammonia_sensor.threshold_max if ammonia_sensor and ammonia_sensor.threshold_max is not None else 600
 
     # Moisture Data
     current_moisture = 0
@@ -737,10 +737,13 @@ def send_telegram_alert(message, chat_id):
     }
 
     try:
-        requests.post(url, data=payload)
-        print("Telegram alert sent")
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("Telegram alert sent successfully.")
+        else:
+            print(f"Telegram alert failed with status {response.status_code}: {response.text}")
     except Exception as e:
-        print(f"Telegram error: {e}")
+        print(f"Telegram network error: {e}")
 
 @csrf_exempt
 
@@ -777,7 +780,7 @@ def sensor_data(request):
         print(f"Saved reading: {sensor_id} = {value}")
 
         # THRESHOLD CHECK
-        threshold = sensor.threshold_max or 600
+        threshold = sensor.threshold_max if sensor.threshold_max is not None else 600
 
         current_time = time.time()
 
@@ -863,10 +866,11 @@ def send_message(chat_id, text):
     }
 
     try:
-        requests.post(url, data=payload)
-
+        response = requests.post(url, json=payload)
+        if response.status_code != 200:
+            print(f"Telegram send failed: {response.text}")
     except Exception as e:
-        print(f"Telegram send error: {e}")
+        print(f"Telegram send network error: {e}")
 
 # =====================================================
 # TELEGRAM WEBHOOK
